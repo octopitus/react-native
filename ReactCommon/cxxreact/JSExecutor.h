@@ -10,6 +10,7 @@
 
 #include <cxxreact/NativeModule.h>
 #include <folly/dynamic.h>
+#include "RAMBundle.h"
 
 #ifndef RN_EXPORT
 #define RN_EXPORT __attribute__((visibility("default")))
@@ -18,12 +19,9 @@
 namespace facebook {
 namespace react {
 
-class JSBigString;
 class JSExecutor;
-class JSModulesUnbundle;
 class MessageQueueThread;
 class ModuleRegistry;
-class RAMBundleRegistry;
 
 // This interface describes the delegate interface required by
 // Executor implementations to call from JS into native code.
@@ -52,20 +50,18 @@ public:
 class RN_EXPORT JSExecutor {
 public:
   /**
+   * Setup JS environemnt with global variables for JS-Native communication.
+   * Should be called only once per JSContext.
+   * Sets: nativeRequire (if bundle is RAM), bundleRegistryLoad
+   */
+  virtual void setupEnvironment(std::function<void(std::string, bool, bool)> loadBundle,
+                                std::function<RAMBundle::Module(uint32_t, std::string)> getModule) = 0;
+
+  /**
    * Execute an application script bundle in the JS context.
    */
-  virtual void loadApplicationScript(std::unique_ptr<const JSBigString> script,
-                                     std::string sourceURL) = 0;
-
-  /**
-   * Add an application "RAM" bundle registry
-   */
-  virtual void setBundleRegistry(std::unique_ptr<RAMBundleRegistry> bundleRegistry) = 0;
-
-  /**
-   * Register a file path for an additional "RAM" bundle
-   */
-  virtual void registerBundle(uint32_t bundleId, const std::string& bundlePath) = 0;
+  virtual void loadScript(std::unique_ptr<const JSBigString> script,
+                          std::string sourceURL) = 0;
 
   /**
    * Executes BatchedBridge.callFunctionReturnFlushedQueue with the module ID,
@@ -107,12 +103,7 @@ public:
 
   virtual void destroy() {}
   virtual ~JSExecutor() {}
-
   virtual void flush() {}
-
-  static std::string getSyntheticBundlePath(
-      uint32_t bundleId,
-      const std::string& bundlePath);
 };
 
 } }

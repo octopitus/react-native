@@ -35,13 +35,10 @@ public:
   ProxyExecutor(jni::global_ref<jobject>&& executorInstance,
                 std::shared_ptr<ExecutorDelegate> delegate);
   virtual ~ProxyExecutor() override;
-  virtual void loadApplicationScript(
-    std::unique_ptr<const JSBigString> script,
-    std::string sourceURL) override;
-  virtual void setBundleRegistry(
-    std::unique_ptr<RAMBundleRegistry> bundle) override;
-  virtual void registerBundle(
-    uint32_t bundleId, const std::string& bundlePath) override;
+  virtual void setupEnvironment(std::function<void(std::string, bool, bool)> loadBundle,
+                                std::function<RAMBundle::Module(uint32_t, std::string)> getModule) override;
+  virtual void loadScript(std::unique_ptr<const JSBigString> script,
+                          std::string sourceURL) override;
   virtual void callFunction(
     const std::string& moduleId,
     const std::string& methodId,

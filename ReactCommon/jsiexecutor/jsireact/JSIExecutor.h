@@ -6,10 +6,7 @@
 #pragma once
 
 #include "JSINativeModules.h"
-
-#include <cxxreact/JSBigString.h>
 #include <cxxreact/JSExecutor.h>
-#include <cxxreact/RAMBundleRegistry.h>
 #include <jsi/jsi.h>
 #include <functional>
 #include <mutex>
@@ -75,12 +72,10 @@ class JSIExecutor : public JSExecutor {
       std::shared_ptr<ExecutorDelegate> delegate,
       const JSIScopedTimeoutInvoker &timeoutInvoker,
       RuntimeInstaller runtimeInstaller);
-  void loadApplicationScript(
-      std::unique_ptr<const JSBigString> script,
-      std::string sourceURL) override;
-  void setBundleRegistry(std::unique_ptr<RAMBundleRegistry>) override;
-  void registerBundle(uint32_t bundleId, const std::string &bundlePath)
-      override;
+  void setupEnvironment(std::function<void(std::string, bool, bool)> loadBundle,
+                        std::function<RAMBundle::Module(uint32_t, std::string)> getModule) override;
+  void loadScript(std::unique_ptr<const JSBigString> script,
+                  std::string sourceURL) override;
   void callFunction(
       const std::string &moduleId,
       const std::string &methodId,
@@ -117,7 +112,6 @@ class JSIExecutor : public JSExecutor {
   std::shared_ptr<ExecutorDelegate> delegate_;
   JSINativeModules nativeModules_;
   std::once_flag bindFlag_;
-  std::unique_ptr<RAMBundleRegistry> bundleRegistry_;
   JSIScopedTimeoutInvoker scopedTimeoutInvoker_;
   RuntimeInstaller runtimeInstaller_;
 

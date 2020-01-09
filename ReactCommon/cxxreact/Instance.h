@@ -8,7 +8,8 @@
 #include <condition_variable>
 #include <memory>
 
-#include <cxxreact/NativeToJsBridge.h>
+#include "BundleRegistry.h"
+#include "BundleLoader.h"
 
 #ifndef RN_EXPORT
 #define RN_EXPORT __attribute__((visibility("default")))
@@ -25,7 +26,6 @@ class JSBigString;
 class JSExecutorFactory;
 class MessageQueueThread;
 class ModuleRegistry;
-class RAMBundleRegistry;
 
 struct InstanceCallback {
   virtual ~InstanceCallback() {}
@@ -42,19 +42,11 @@ public:
                         std::shared_ptr<MessageQueueThread> jsQueue,
                         std::shared_ptr<ModuleRegistry> moduleRegistry);
 
-  void setSourceURL(std::string sourceURL);
+  void runApplication(std::string initialBundleURL,
+                      std::unique_ptr<BundleLoader> bundleLoader,
+                      bool loadSynchronously);
+  void runApplicationInRemoteDebugger(std::string sourceURL);
 
-  void loadScriptFromString(std::unique_ptr<const JSBigString> string,
-                            std::string sourceURL, bool loadSynchronously);
-  static bool isIndexedRAMBundle(const char *sourcePath);
-  static bool isIndexedRAMBundle(std::unique_ptr<const JSBigString>* string);
-  void loadRAMBundleFromString(std::unique_ptr<const JSBigString> script, const std::string& sourceURL);
-  void loadRAMBundleFromFile(const std::string& sourcePath,
-                             const std::string& sourceURL,
-                             bool loadSynchronously);
-  void loadRAMBundle(std::unique_ptr<RAMBundleRegistry> bundleRegistry,
-                     std::unique_ptr<const JSBigString> startupScript,
-                     std::string startupScriptSourceURL, bool loadSynchronously);
   bool supportsProfiling();
   void setGlobalVariable(std::string propName,
                          std::unique_ptr<const JSBigString> jsonValue);
@@ -65,9 +57,6 @@ public:
                       folly::dynamic &&params);
   void callJSCallback(uint64_t callbackId, folly::dynamic &&params);
 
-  // This method is experimental, and may be modified or removed.
-  void registerBundle(uint32_t bundleId, const std::string& bundlePath);
-
   const ModuleRegistry &getModuleRegistry() const;
   ModuleRegistry &getModuleRegistry();
 
@@ -77,16 +66,16 @@ public:
 
 private:
   void callNativeModules(folly::dynamic &&calls, bool isEndOfBatch);
-  void loadApplication(std::unique_ptr<RAMBundleRegistry> bundleRegistry,
-                       std::unique_ptr<const JSBigString> startupScript,
-                       std::string startupScriptSourceURL);
-  void loadApplicationSync(std::unique_ptr<RAMBundleRegistry> bundleRegistry,
-                           std::unique_ptr<const JSBigString> startupScript,
-                           std::string startupScriptSourceURL);
+  void runApplicationAsync(std::string initialBundleURL,
+                           std::unique_ptr<BundleLoader> bundleLoader);
+  void runApplicationSync(std::string initialBundleURL,
+                          std::unique_ptr<BundleLoader> bundleLoader);
 
   std::shared_ptr<InstanceCallback> callback_;
-  std::unique_ptr<NativeToJsBridge> nativeToJsBridge_;
   std::shared_ptr<ModuleRegistry> moduleRegistry_;
+  std::unique_ptr<BundleRegistry> bundleRegistry_;
+
+  std::string defaultEnvironmentId_ = "default";
 
   std::mutex m_syncMutex;
   std::condition_variable m_syncCV;

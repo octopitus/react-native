@@ -20,6 +20,7 @@ import com.facebook.react.common.LifecycleState;
 import com.facebook.react.devsupport.RedBoxHandler;
 import com.facebook.react.devsupport.interfaces.DevBundleDownloadListener;
 import com.facebook.react.devsupport.interfaces.DevSupportManager;
+import com.facebook.react.devsupport.DevBundlesContainer;
 import com.facebook.react.jscexecutor.JSCExecutorFactory;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
 import com.facebook.react.packagerconnection.RequestHandler;
@@ -28,6 +29,8 @@ import com.facebook.soloader.SoLoader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -106,7 +109,15 @@ public class ReactInstanceManagerBuilder {
       mJSBundleLoader = null;
       return this;
     }
-    return setJSBundleLoader(JSBundleLoader.createFileLoader(jsBundleFile));
+    DevBundlesContainer bundlesContainer = new DevBundlesContainer(jsBundleFile);
+    Pattern bundleNamePattern = Pattern.compile("/([^./]+)[^/]+$");
+    Matcher bundleNameMatcher = bundleNamePattern.matcher(jsBundleFile);
+    String bundleName = "index"; // fallback
+    if (bundleNameMatcher.find()) {
+        bundleName = bundleNameMatcher.group(1);
+    }
+    bundlesContainer.pushBundle(bundleName, jsBundleFile, jsBundleFile);
+    return setJSBundleLoader(JSBundleLoader.createFileLoader(jsBundleFile, bundlesContainer));
   }
 
   /**
