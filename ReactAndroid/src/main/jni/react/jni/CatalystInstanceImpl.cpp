@@ -184,6 +184,7 @@ void CatalystInstanceImpl::jniRegisterSegment(int segmentId, const std::string& 
 void CatalystInstanceImpl::jniLoadScriptFromAssets(
     jni::alias_ref<JAssetManager::javaobject> assetManager,
     const std::string& assetURL,
+    int bundleId,
     bool loadSynchronously) {
   const int kAssetsLength = 9;  // strlen("assets://");
   auto sourceURL = assetURL.substr(kAssetsLength);
@@ -192,15 +193,15 @@ void CatalystInstanceImpl::jniLoadScriptFromAssets(
   auto script = loadScriptFromAssets(manager, sourceURL);
   if (JniJSModulesUnbundle::isUnbundle(manager, sourceURL)) {
     auto bundle = JniJSModulesUnbundle::fromEntryFile(manager, sourceURL);
-    auto registry = RAMBundleRegistry::singleBundleRegistry(std::move(bundle));
     instance_->loadRAMBundle(
-      std::move(registry),
+      std::move(bundle),
       std::move(script),
       sourceURL,
+      (uint32_t)bundleId,
       loadSynchronously);
     return;
   } else if (Instance::isIndexedRAMBundle(&script)) {
-    instance_->loadRAMBundleFromString(std::move(script), sourceURL);
+    instance_->loadRAMBundleFromString(std::move(script), sourceURL, (uint32_t)bundleId);
   } else {
     instance_->loadScriptFromString(std::move(script), sourceURL, loadSynchronously);
   }
@@ -208,9 +209,10 @@ void CatalystInstanceImpl::jniLoadScriptFromAssets(
 
 void CatalystInstanceImpl::jniLoadScriptFromFile(const std::string& fileName,
                                                  const std::string& sourceURL,
+                                                 int bundleId,
                                                  bool loadSynchronously) {
   if (Instance::isIndexedRAMBundle(fileName.c_str())) {
-    instance_->loadRAMBundleFromFile(fileName, sourceURL, loadSynchronously);
+    instance_->loadRAMBundleFromFile(fileName, sourceURL, (uint32_t)bundleId, loadSynchronously);
   } else {
     std::unique_ptr<const JSBigFileString> script;
     RecoverableError::runRethrowingAsRecoverable<std::system_error>(
@@ -226,12 +228,12 @@ void CatalystInstanceImpl::jniLoadScriptFromDeltaBundle(
     jni::alias_ref<NativeDeltaClient::jhybridobject> jDeltaClient,
     bool loadSynchronously) {
 
-  auto deltaClient = jDeltaClient->cthis()->getDeltaClient();
-  auto registry = RAMBundleRegistry::singleBundleRegistry(
-    folly::make_unique<JSDeltaBundleClientRAMBundle>(deltaClient));
+  // auto deltaClient = jDeltaClient->cthis()->getDeltaClient();
+  // auto registry = RAMBundleRegistry::singleBundleRegistry(
+  //   folly::make_unique<JSDeltaBundleClientRAMBundle>(deltaClient));
 
-  instance_->loadRAMBundle(
-    std::move(registry), deltaClient->getStartupCode(), sourceURL, loadSynchronously);
+  // instance_->loadRAMBundle(
+  //   std::move(registry), deltaClient->getStartupCode(), sourceURL, loadSynchronously);
 }
 
 void CatalystInstanceImpl::jniCallJSFunction(std::string module, std::string method, NativeArray* arguments) {
